@@ -1,0 +1,252 @@
+###############################################################################
+# Enmeshed Full-Stack Local Bootstrap
+#
+# Brings up the complete enmeshed infrastructure locally:
+#   - Backbone (Consumer API, Admin UI, SSE Server, Event Handler)
+#   - Two Connectors (for testing identity-to-identity communication)
+#   - Infrastructure (PostgreSQL, RabbitMQ, Azurite, MongoDB)
+#
+# Usage:
+#   docker compose up -d
+#   docker compose logs -f
+#
+# Endpoints:
+#   - Backbone Consumer API:  http://localhost:8090
+#   - Backbone Admin UI:      http://localhost:8091
+#   - Backbone SSE Server:    http://localhost:8092
+#   - Connector 1 API:        http://localhost:3000  (API key: This_is_a_test_APIKEY_with_30_chars+)
+#   - Connector 2 API:        http://localhost:3001  (API key: This_is_a_test_APIKEY_with_30_chars+)
+#   - Connector 1 API Docs:   http://localhost:3000/docs
+#   - RabbitMQ Management:    http://localhost:15672  (guest/guest)
+#
+# Bootstrap sequence:
+#   1. Infrastructure services start (postgres, rabbitmq, azurite, mongo)
+#   2. Database migrator runs EF Core migrations
+#   3. Backbone services start (consumer-api, admin-ui, sse-server, event-handler)
+#   4. Admin CLI seeds a test client (clientId=test, clientSecret=test)
+#   5. Connectors start and register with the backbone
+###############################################################################
+
+name: enmeshed-local
+
+services:
+
+  #############################################################################
+  # Infrastructure
+  #############################################################################
+
+  postgres:
+    image: postgres:16-alpine
+    hostname: postgres
+    environment:
+      POSTGRES_PASSWORD: Passw0rd
+      POSTGRES_DB: enmeshed
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    hostname: rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    hostname: azurite
+    command: azurite -d /data/debug.log -l /data --blobHost "0.0.0.0" --queueHost "0.0.0.0" --skipApiVersionCheck
+    volumes:
+      - azurite-data:/data
+
+  mongo:
+    image: mongo:7
+    hostname: mongo
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+
+  #############################################################################
+  # Backbone - Database Migration (runs once, then exits)
+  #############################################################################
+
+  database-migrator:
+    image: ghcr.io/nmshd/backbone-database-migrator:7.1.3
+    environment:
+      Infrastructure__SqlDatabase__Provider: Postgres
+      Infrastructure__SqlDatabase__ConnectionString: "Server=postgres;Database=enmeshed;User Id=postgres;Password=Passw0rd;Port=5432"
+      ASPNETCORE_ENVIRONMENT: Development
+    depends_on:
+      postgres:
+        condition: service_healthy
+    configs:
+      - source: backbone-config
+        target: /app/appsettings.override.json
+
+  #############################################################################
+  # Backbone - Application Services
+  #############################################################################
+
+  consumer-api:
+    image: ghcr.io/nmshd/backbone-consumer-api:7.1.3
+    hostname: consumer-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    ports:
+      - "8090:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      azurite:
+        condition: service_started
+      database-migrator:
+        condition: service_completed_successfully
+      sse-server:
+        condition: service_started
+    configs:
+      - source: backbone-config
+        target: /app/appsettings.override.json
+
+  sse-server:
+    image: ghcr.io/nmshd/backbone-sse-server:7.1.3
+    hostname: sse-server
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    ports:
+      - "8092:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      database-migrator:
+        condition: service_completed_successfully
+    configs:
+      - source: backbone-config
+        target: /app/appsettings.override.json
+
+  event-handler:
+    image: ghcr.io/nmshd/backbone-event-handler:7.1.3
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      database-migrator:
+        condition: service_completed_successfully
+    configs:
+      - source: backbone-config
+        target: /app/appsettings.override.json
+
+  admin-ui:
+    image: ghcr.io/nmshd/backbone-admin-ui:7.1.3
+    hostname: admin-ui
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    ports:
+      - "8091:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      consumer-api:
+        condition: service_healthy
+      database-migrator:
+        condition: service_completed_successfully
+    configs:
+      - source: backbone-config
+        target: /app/appsettings.override.json
+
+  #############################################################################
+  # Backbone - Seed (creates test OAuth client, runs once)
+  #############################################################################
+
+  seed-client:
+    image: ghcr.io/nmshd/backbone-admin-cli:7.1.3
+    command: backbone client create --clientId test --clientSecret test --defaultTier Basic
+    depends_on:
+      consumer-api:
+        condition: service_healthy
+    configs:
+      - source: backbone-config
+        target: /app/appsettings.override.json
+
+  #############################################################################
+  # Connectors
+  #############################################################################
+
+  connector1:
+    image: ghcr.io/nmshd/connector:7.3.1
+    hostname: connector1
+    ports:
+      - "3000:80"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      seed-client:
+        condition: service_completed_successfully
+    configs:
+      - source: connector1-config
+        target: /app/config.json
+    environment:
+      CUSTOM_CONFIG_LOCATION: /app/config.json
+
+  connector2:
+    image: ghcr.io/nmshd/connector:7.3.1
+    hostname: connector2
+    ports:
+      - "3001:80"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      seed-client:
+        condition: service_completed_successfully
+    configs:
+      - source: connector2-config
+        target: /app/config.json
+    environment:
+      CUSTOM_CONFIG_LOCATION: /app/config.json
+
+#############################################################################
+# Volumes
+#############################################################################
+
+volumes:
+  postgres-data:
+  rabbitmq-data:
+  azurite-data:
+  mongo-data:
+
+#############################################################################
+# Configs
+#############################################################################
+
+configs:
+  backbone-config:
+    file: config/backbone-appsettings.json
+  connector1-config:
+    file: config/connector-config.json
+  connector2-config:
+    file: config/connector2-config.json
