@@ -39,11 +39,12 @@ log() { echo "-- $*"; }
 
 parse_device_opt() {
     ADB=(adb)
+    local subcmd="$1"; shift
     local OPTIND=1
-    while getopts "d:" opt; do
+    while getopts "d:" opt "$@"; do
         case "$opt" in
             d) ADB=(adb -s "$OPTARG") ;;
-            *) echo "Usage: $0 $1 [-d <device>]" >&2; exit 1 ;;
+            *) echo "Usage: $0 $subcmd [-d <device>]" >&2; exit 1 ;;
         esac
     done
 }
@@ -91,11 +92,14 @@ MANIFEST
     log "APK: $APK_PATH"
 }
 
-cmd_wipe() {
-    parse_device_opt wipe "$@"
-
+do_uninstall() {
     log "Uninstalling $PACKAGE (removing app + all data)"
     "${ADB[@]}" uninstall "$PACKAGE" || log "App was not installed, nothing to uninstall"
+}
+
+cmd_wipe() {
+    parse_device_opt wipe "$@"
+    do_uninstall
 }
 
 cmd_install() {
@@ -106,7 +110,7 @@ cmd_install() {
         exit 1
     fi
 
-    cmd_wipe "$@"
+    do_uninstall
 
     log "Installing APK via adb"
     "${ADB[@]}" install "$APK_PATH"
