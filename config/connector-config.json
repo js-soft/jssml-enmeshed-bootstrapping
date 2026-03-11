@@ -33,6 +33,10 @@
         },
         "sync": {
             "enabled": true
+        },
+        "autoAcceptPendingRelationships": {
+            "enabled": true,
+            "interval": 1
         }
     }
 }
