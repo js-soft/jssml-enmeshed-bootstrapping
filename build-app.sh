@@ -14,9 +14,10 @@
 #   -d <device>    Target device serial (from `adb devices`). Uses default adb device if omitted.
 #
 # Environment overrides:
-#   BASE_URL       (default: http://localhost:8090)
-#   CLIENT_ID      (default: test)
-#   CLIENT_SECRET  (default: test)
+#   BB_CONSUMER_API_BASE_URL  (default: http://localhost:8090)
+#   BB_SSE_BASE_URL           (default: http://localhost:8092)
+#   CLIENT_ID                 (default: test)
+#   CLIENT_SECRET             (default: test)
 
 set -euo pipefail
 
@@ -26,7 +27,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export PATH="$HOME/.pub-cache/bin:$PATH"
 
 # --- Config (override via env) ---
-BASE_URL="${BASE_URL:-http://localhost:8090}"
+BB_CONSUMER_API_BASE_URL="${BB_CONSUMER_API_BASE_URL:-http://localhost:8090}"
+BB_SSE_BASE_URL="${BB_SSE_BASE_URL:-http://localhost:8092}"
 CLIENT_ID="${CLIENT_ID:-test}"
 CLIENT_SECRET="${CLIENT_SECRET:-test}"
 
@@ -68,10 +70,11 @@ cmd_clone() {
 }
 
 cmd_build() {
-    log "Writing config (baseUrl=$BASE_URL)"
+    log "Writing config (baseUrl=$BB_CONSUMER_API_BASE_URL, sseBaseUrl=$BB_SSE_BASE_URL)"
     cat > "$APP_DIR/config.json" <<EOF
 {
-    "app_baseUrl": "$BASE_URL",
+    "app_baseUrl": "$BB_CONSUMER_API_BASE_URL",
+    "app_sseBaseUrl": "$BB_SSE_BASE_URL",
     "app_clientId": "$CLIENT_ID",
     "app_clientSecret": "$CLIENT_SECRET",
     "app_autoCreateAccount": "Peter Leerzeichen"
@@ -112,8 +115,9 @@ cmd_install() {
     "${ADB[@]}" shell pm grant "$PACKAGE" android.permission.CAMERA
     "${ADB[@]}" shell pm grant "$PACKAGE" android.permission.POST_NOTIFICATIONS
 
-    log "Setting up adb reverse port forwarding (localhost:8090 -> host:8090)"
+    log "Setting up adb reverse port forwarding"
     "${ADB[@]}" reverse tcp:8090 tcp:8090
+    "${ADB[@]}" reverse tcp:8092 tcp:8092
 }
 
 cmd_run() {
@@ -153,7 +157,8 @@ case "$subcmd" in
         echo "  all [-d device]      Run all steps in sequence"
         echo ""
         echo "Environment overrides:"
-        echo "  BASE_URL=$BASE_URL"
+        echo "  BB_CONSUMER_API_BASE_URL=$BB_CONSUMER_API_BASE_URL"
+        echo "  BB_SSE_BASE_URL=$BB_SSE_BASE_URL"
         echo "  CLIENT_ID=$CLIENT_ID"
         echo "  CLIENT_SECRET=$CLIENT_SECRET"
         exit 1

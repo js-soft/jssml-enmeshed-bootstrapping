@@ -31,8 +31,12 @@
                 }
             }
         },
-        "sync": {
+        "sse": {
             "enabled": true,
+            "baseUrlOverride": "http://sse-server:8080"
+        },
+        "sync": {
+            "enabled": false,
             "interval": 1
         },
         "autoAcceptPendingRelationships": {
