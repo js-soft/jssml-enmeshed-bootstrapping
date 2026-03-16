@@ -1,74 +1,28 @@
 # pyright: reportUnknownMemberType = false, reportMissingTypeStubs = false, reportExplicitAny = false, reportAny = false
 # assumes app is built and installed and the connector is running
 import json
-import time
+import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from typing import Any, TypedDict
+from typing import Any
 
-from adbutils import adb
-from devtools import pprint
-from ollama import ChatResponse, chat
+from ollama import ChatResponse, Client
 
-from enmeshed_bootstrapping import dev_app
-from enmeshed_bootstrapping.connector_sdk import ConnectorSDK
+from .connector_sdk import ConnectorSDK
 
+CONNECTOR_BASE_URL = os.environ["CONNECTOR_BASE_URL"]
+CONNECTOR_API_KEY = os.environ["CONNECTOR_API_KEY"]
+WEBHOOK_ENDPOINT_HOSTNAME = os.environ["WEBHOOK_ENDPOINT_HOSTNAME"]  # e.g. localhost
+WEBHOOK_ENDPOINT_PORT = int(os.environ["WEBHOOK_ENDPOINT_PORT"])  # e.g. 10001
+OLLAMA_HOST = os.environ["OLLAMA_HOST"]  # e.g. http://localhost:5512
 
-class LocalAccountDTO(TypedDict):
-    id: str
-    address: str
-    name: str
+connector = ConnectorSDK(CONNECTOR_BASE_URL, CONNECTOR_API_KEY)
+ollama_client = Client(host=OLLAMA_HOST)
 
-
-CONNECTOR_BASE_URL = "http://localhost:3000"
-CONNECTOR_API_KEY = "This_is_a_test_APIKEY_with_30_chars+"
-
-connector = ConnectorSDK(base_url=CONNECTOR_BASE_URL, api_key=CONNECTOR_API_KEY)
-d = adb.device()
-dev_app.run_clean(d)
-
-app_account: LocalAccountDTO = dev_app.c2_send(  # pyright: ignore[reportAssignmentType]
-    {
-        "action": "createDefaultAccount",
-        "name": "Peter Langweilig",
-    }
-)["data"]
-pprint(app_account)
-
-response = connector.post_own_rlt()
-truncref = response.result.reference.truncated
-
-_ = dev_app.c2_send(
-    {
-        "action": "acceptRelationshipTemplate",
-        "accountId": app_account["id"],
-        "truncRef": truncref,
-    }
-)
-
-while True:
-    rels = connector.get_relationships(peer=app_account["address"], status="Active")
-    if len(rels.result) > 0:
-        break
-
-    time.sleep(0.5)
-
-
-connector.post_message(
-    app_account["address"],
-    f"Willkommen, {app_account['name']}",
-    "Herzlich willkommen.",
-)
-
-_ = dev_app.c2_send(
-    {
-        "action": "navigate",
-        "path": f"/account/{app_account['id']}",
-    }
-)
+# XXX: assert ollama server is running
 
 
 def generate_reply(title: str, body: str) -> str:
-    response: ChatResponse = chat(
+    response: ChatResponse = ollama_client.chat(
         model="gemma3:4b",
         messages=[
             {
@@ -102,8 +56,6 @@ def handle_webhook(data: dict[Any, Any]) -> Any:
     title = content["subject"]
     body = content["body"]
 
-    print("webhook msg", sender_addr, title, body)
-
     reply = generate_reply(title, body)
     connector.post_message(
         sender_addr,
@@ -129,5 +81,11 @@ class Handler(BaseHTTPRequestHandler):
         _ = self.wfile.write(json.dumps(result).encode())
 
 
-CONNECTOR_WEBHOOK_PORT = 10001
-HTTPServer(("0.0.0.0", CONNECTOR_WEBHOOK_PORT), Handler).serve_forever()
+def run_agent_forever():
+    srv = HTTPServer((WEBHOOK_ENDPOINT_HOSTNAME, WEBHOOK_ENDPOINT_PORT), Handler)
+    srv.serve_forever()
+
+
+__all__ = [
+    "run_agent_forever",
+]

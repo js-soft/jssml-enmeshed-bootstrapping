@@ -1,8 +1,11 @@
 # Demo / Anwendungsfall Kundenchatbot
 
-- 1 docker-compose.yml für Infrastruktur
-- 1 Script zum Compilen und Installieren der App
-- 1 Script zum Clean-Starten der App auf Androiddevice
+```bash
+docker compose up -d  # Infrastruktur starten
+./build-app.sh        # App kompilieren
+./install-app.sh      # App auf Device installieren
+./run-usecase.sh      # App und Connector Bootstrap
+```
 
 # Tipps und Tricks
 

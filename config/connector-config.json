@@ -45,10 +45,15 @@
     },
     "webhooks": {
       "enabled": true,
-      "webhooks": [{ "triggers": ["**"], "target": "test" }],
+      "webhooks": [
+        {
+          "triggers": ["consumption.messageProcessed"],
+          "target": "incomingMessages"
+        }
+      ],
       "targets": {
-        "test": {
-          "url": "http://host.docker.internal:10001"
+        "incomingMessages": {
+          "url": "http://connector1-agent:10001"
         }
       }
     }

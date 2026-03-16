@@ -2,13 +2,8 @@
 name = "enmeshed-bootstrapping"
 version = "0.1.0"
 description = "Add your description here"
-readme = "README.md"
 requires-python = ">=3.13"
-dependencies = [
-    "adbutils>=2.12.0",
-    "ollama>=0.6.1",
-    "websockets>=16.0",
-]
+dependencies = ["adbutils>=2.12.0", "ollama>=0.6.1", "websockets>=16.0"]
 
 [dependency-groups]
 dev = [
@@ -21,3 +16,7 @@ dev = [
 
 [tool.basedpyright]
 strict = ["**/*"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
