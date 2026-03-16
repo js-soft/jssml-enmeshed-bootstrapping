@@ -1,47 +1,56 @@
 {
-    "debug": true,
-    "transportLibrary": {
-        "baseUrl": "http://consumer-api:8080",
-        "platformClientId": "test",
-        "platformClientSecret": "test",
-        "allowIdentityCreation": true,
-        "addressGenerationHostnameOverride": "localhost"
-    },
-    "database": {
-        "connectionString": "mongodb://mongo:27017",
-        "dbName": "connector1"
-    },
-    "infrastructure": {
-        "httpServer": {
-            "authentication": {
-                "apiKey": {
-                    "keys": {
-                        "default": { "key": "This_is_a_test_APIKEY_with_30_chars+" }
-                    }
-                }
-            }
+  "debug": true,
+  "transportLibrary": {
+    "baseUrl": "http://consumer-api:8080",
+    "platformClientId": "test",
+    "platformClientSecret": "test",
+    "allowIdentityCreation": true,
+    "addressGenerationHostnameOverride": "localhost"
+  },
+  "database": {
+    "connectionString": "mongodb://mongo:27017",
+    "dbName": "connector1"
+  },
+  "infrastructure": {
+    "httpServer": {
+      "authentication": {
+        "apiKey": {
+          "keys": {
+            "default": { "key": "This_is_a_test_APIKEY_with_30_chars+" }
+          }
         }
-    },
-    "modules": {
-        "coreHttpApi": {
-            "docs": {
-                "enabled": true,
-                "rapidoc": {
-                    "persistAuth": true
-                }
-            }
-        },
-        "sse": {
-            "enabled": true,
-            "baseUrlOverride": "http://sse-server:8080"
-        },
-        "sync": {
-            "enabled": false,
-            "interval": 1
-        },
-        "autoAcceptPendingRelationships": {
-            "enabled": true,
-            "interval": 1
-        }
+      }
     }
+  },
+  "modules": {
+    "coreHttpApi": {
+      "docs": {
+        "enabled": true,
+        "rapidoc": {
+          "persistAuth": true
+        }
+      }
+    },
+    "sse": {
+      "enabled": true,
+      "baseUrlOverride": "http://sse-server:8080"
+    },
+    "sync": {
+      "enabled": false,
+      "interval": 1
+    },
+    "autoAcceptPendingRelationships": {
+      "enabled": true,
+      "interval": 1
+    },
+    "webhooks": {
+      "enabled": true,
+      "webhooks": [{ "triggers": ["**"], "target": "test" }],
+      "targets": {
+        "test": {
+          "url": "http://host.docker.internal:10001"
+        }
+      }
+    }
+  }
 }

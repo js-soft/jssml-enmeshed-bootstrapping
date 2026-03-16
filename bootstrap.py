@@ -1,10 +1,13 @@
-# pyright: reportUnknownMemberType = false, reportMissingTypeStubs = false
+# pyright: reportUnknownMemberType = false, reportMissingTypeStubs = false, reportExplicitAny = false, reportAny = false
 # assumes app is built and installed and the connector is running
+import json
+from threading import activeCount
 import time
-from typing import TypedDict
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from typing import Any, TypedDict
 
 from adbutils import adb
-from devtools import pprint
+from devtools import pformat, pprint
 
 from src import dev_app
 from src.connector_sdk import ConnectorSDK
@@ -52,8 +55,8 @@ while True:
 
 connector.post_message(
     app_account["address"],
-    "Hi Mum",
-    "Look, no hands!",
+    f"Willkommen, {app_account["name"]}",
+    "Herzlich willkommen.",
 )
 
 _ = dev_app.c2_send(
@@ -64,4 +67,49 @@ _ = dev_app.c2_send(
 )
 
 
-# # print(connector.get_health())
+def handle_webhook(data: dict[Any, Any]) -> Any:
+    trigger: str | None = data.get("trigger")
+
+    if not trigger == "consumption.messageProcessed":
+        return None
+
+    message = data["data"]["message"]
+    if message["isOwn"]:
+        return None
+
+    content = message["content"]
+    if content["@type"] != "Mail":
+        return None
+
+    sender_addr = message["createdBy"]
+    title = content["subject"]
+    body = content["body"]
+
+    print("webhook msg", sender_addr, title, body)
+
+    connector.post_message(
+        sender_addr,
+        title,
+        f"echo: {body}",
+    )
+
+    return {}
+
+
+class Handler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        length = int(self.headers["Content-Length"])
+        body = json.loads(self.rfile.read(length))
+
+        result = {}
+        if self.path == "/":
+            result = handle_webhook(body)
+
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        _ = self.wfile.write(json.dumps(result).encode())
+
+
+CONNECTOR_WEBHOOK_PORT = 10001
+HTTPServer(("0.0.0.0", CONNECTOR_WEBHOOK_PORT), Handler).serve_forever()

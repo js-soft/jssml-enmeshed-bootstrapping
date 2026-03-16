@@ -212,6 +212,8 @@ services:
         target: /app/config.json
     environment:
       CUSTOM_CONFIG_LOCATION: /app/config.json
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   connector2:
     image: ghcr.io/nmshd/connector:7.3.1

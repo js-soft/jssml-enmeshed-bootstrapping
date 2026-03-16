@@ -24,6 +24,8 @@ adb logcat --pid="$app_pid" | grep '\[bootstrap\]'
 
 Bisher bietet die App keine Möglichkeit eines LLM als Chatbot. Wäre generell und für die Anwendungsfälle unten z.T. interessant. Reines Integrationsproblem.
 
+- Streaming-Kanal für bidirektionale Kommunikation Client-LLM (hat Signal ähliches Problem? https://time.com/7346534/signal-confer-ai-moxie-marlinspike/ und https://confer.to/)
+
 ### AS1 - Message- / Mailbasiert
 
 Automatische Beantwortung von Mails durch LLMs.
