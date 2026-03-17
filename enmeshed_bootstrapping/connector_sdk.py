@@ -4,6 +4,10 @@ from typing import Any
 import httpx
 from pydantic import BaseModel
 
+# As Host: Connector API
+CONNECTOR_BASE_URL = "http://localhost:3000"
+CONNECTOR_API_KEY = "This_is_a_test_APIKEY_with_30_chars+"
+
 
 class GetHealthResponse(BaseModel):
     isHealthy: bool
@@ -47,8 +51,8 @@ class ConnectorSDK:
 
     def __init__(
         self,
-        base_url: str,
-        api_key: str,
+        base_url: str = CONNECTOR_BASE_URL,
+        api_key: str = CONNECTOR_API_KEY,
     ) -> None:
 
         self._http = httpx.Client(

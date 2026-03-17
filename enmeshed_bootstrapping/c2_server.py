@@ -7,6 +7,10 @@ from typing import Literal, TypedDict
 from websockets.server import ServerProtocol
 from websockets.sync.server import ServerConnection
 
+# As Host: C2 Server
+C2_SERVER_HOSTNAME = "localhost"
+C2_SERVER_PORT = 9099
+
 
 class RCPResponseOk(TypedDict):
     ok: Literal[True]
@@ -52,8 +56,8 @@ class C2Server:
 
     def __init__(
         self,
-        ws_server_hostname: str,
-        ws_server_port: int,
+        ws_server_hostname: str = C2_SERVER_HOSTNAME,
+        ws_server_port: int = C2_SERVER_PORT,
     ) -> None:
         self.miso = queue.Queue()
         self.mosi = queue.Queue()

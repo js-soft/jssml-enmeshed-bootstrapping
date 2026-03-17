@@ -1,5 +1,4 @@
 # pyright: reportUnknownMemberType = false, reportMissingTypeStubs = false, reportExplicitAny = false, reportAny = false
-# assumes app is built and installed and the connector is running
 import json
 import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -9,14 +8,15 @@ from ollama import ChatResponse, Client
 
 from .connector_sdk import ConnectorSDK
 
+# Runs inside container, see docker-compose.yml
 CONNECTOR_BASE_URL = os.environ["CONNECTOR_BASE_URL"]
-CONNECTOR_API_KEY = os.environ["CONNECTOR_API_KEY"]
-WEBHOOK_ENDPOINT_HOSTNAME = os.environ["WEBHOOK_ENDPOINT_HOSTNAME"]  # e.g. localhost
-WEBHOOK_ENDPOINT_PORT = int(os.environ["WEBHOOK_ENDPOINT_PORT"])  # e.g. 10001
-OLLAMA_HOST = os.environ["OLLAMA_HOST"]  # e.g. http://localhost:5512
+CONNECTOR_API_KEY = os.environ["CONNECTOR_BASE_URL"]
+WEBHOOK_ENDPOINT_HOSTNAME = os.environ["WEBHOOK_ENDPOINT_HOSTNAME"]
+WEBHOOK_ENDPOINT_PORT = int(os.environ["WEBHOOK_ENDPOINT_PORT"])
 
-connector = ConnectorSDK(CONNECTOR_BASE_URL, CONNECTOR_API_KEY)
-ollama_client = Client(host=OLLAMA_HOST)
+
+connector = ConnectorSDK(base_url=CONNECTOR_BASE_URL, api_key=CONNECTOR_API_KEY)
+ollama_client = Client()
 
 
 def generate_reply(title: str, body: str) -> str:
