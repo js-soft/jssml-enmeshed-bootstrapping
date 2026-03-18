@@ -53,7 +53,7 @@
       ],
       "targets": {
         "incomingMessages": {
-          "url": "http://connector1-agent:10001"
+          "url": "http://host.docker.internal:10001"
         }
       }
     }
