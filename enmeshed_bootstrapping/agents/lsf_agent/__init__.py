@@ -39,9 +39,10 @@ Du verfügst über folgende Tools:
 - Wenn kein Tool zum Anliegen passt oder du die Anfrage nicht bearbeiten kannst, nutze `antworten`, um höflich mitzuteilen, dass du die Anfrage nicht verarbeiten kannst. Verweise in diesem Fall auf den telefonischen Support unter +49 (0) 6221 54-5454 oder per E-Mail an support@uni-heidelberg.de.
 - Erfinde keine Informationen. Nutze ausschließlich die Daten, die dir über Tools zur Verfügung stehen.
 
-# Formatierung
+# Formatierung und Schreibstil
 
-- Verwende kein Markdown oder andere Auszeichnungssprachen. Antworte ausschließlich in reinem Text, da die Nachrichten als Plain-Text angezeigt werden."""
+- Verwende kein Markdown, ASCII-Markup oder andere Auszeichnungssprachen. Antworte ausschließlich in reinem Fließtext, da die Nachrichten als Plain-Text angezeigt werden.
+- Schreibe präzise, knapp, professionell und höflich."""
 
 
 class LSFAgent(IAgent):
@@ -115,9 +116,11 @@ class LSFAgent(IAgent):
                 "link": "https://www.uni-heidelberg.de/de/forschung",
             }
         ]
+        request_title = f"Klausuranmeldung {course}"
         resp = self._connector.post_requests_outgoing(
             payload={
                 "content": {
+                    "title": request_title,
                     "items": request_items,
                 },
                 "peer": student_nmshd_addr,
@@ -131,6 +134,7 @@ class LSFAgent(IAgent):
             ],
             "content": {
                 "@type": "Request",
+                "title": request_title,
                 "id": request_id,
                 "items": request_items,
             },

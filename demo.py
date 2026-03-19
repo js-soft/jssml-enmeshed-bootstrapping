@@ -55,7 +55,12 @@ def start_app(device: str | None = None):
 @click.option(
     "--ollama-host", default=None, help="Ollama Host (e.g. http://localhost:11434)"
 )
-@click.option("--ollama-model", default=_OLLAMA_DEFAULT_MODEL, help="ollama model")
+@click.option(
+    "--ollama-model",
+    default=_OLLAMA_DEFAULT_MODEL,
+    show_default=True,
+    help="ollama model",
+)
 @click.option(
     "--skip-bootstrap", is_flag=True, default=False, help="Skip the bootstrap flow"
 )
