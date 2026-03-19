@@ -131,7 +131,7 @@ class ConnectorSDK:
             "expiresAt": expires_at.isoformat(timespec="milliseconds"),
             "content": content,
         }
-        resp = self._send("POST", path, json=json)  # pyright: ignore[reportArgumentType]
+        resp = self._send("POST", path, json=json)
         _ = resp.raise_for_status()
         return PostOwnRLTResponse.model_validate(resp.json())
 

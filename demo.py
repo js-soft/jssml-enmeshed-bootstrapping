@@ -6,7 +6,8 @@ import click
 import ollama
 
 from enmeshed_bootstrapping import dev_app
-from enmeshed_bootstrapping.agents import auto_responder, lsf_agent
+from enmeshed_bootstrapping.agents import auto_responder
+from enmeshed_bootstrapping.agents.lsf_agent import LSFAgent
 from enmeshed_bootstrapping.c2_server import C2Server
 from enmeshed_bootstrapping.connector_sdk import ConnectorSDK
 from enmeshed_bootstrapping.flows import bootstrap
@@ -77,10 +78,14 @@ def run(
             webhook_srv.serve_forever()
 
         case "lsf":
-            click.echo("starting lsf agent...")
-            handlerfn = lsf_agent.make_handlerfn(connector, ollama_client)
-            webhook_srv = WebhookServer(handlerfn, hostname="0.0.0.0")
-            webhook_srv.serve_forever()
+            agent = LSFAgent(
+                connector,
+                ollama_client,
+                webhook_server_hostname="0.0.0.0",
+            )
+            agent.init()
+            click.echo("LSF Agent is listening...")
+            agent.serve_forever()
 
         case _:
             raise ValueError(f"no such demo {demo}")

@@ -41,9 +41,14 @@ class WebhookServer:
     def __init__(
         self,
         handlerfn: HandlerFn,
-        hostname: str = _WEBHOOK_SRV_HOSTNAME,
-        port: int = _WEBHOOK_SRV_PORT,
+        hostname: str | None = None,
+        port: int | None = None,
     ) -> None:
+        if hostname is None:
+            hostname = _WEBHOOK_SRV_HOSTNAME
+        if port is None:
+            port = _WEBHOOK_SRV_PORT
+
         self._server = HTTPServer((hostname, port), _make_handler(handlerfn))
 
     def serve_forever(self) -> None:
