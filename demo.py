@@ -67,10 +67,11 @@ def run(
     skip_bootstrap: bool = False,
 ) -> None:
     """Run a particular demo."""
-    c2 = C2Server()
-    connector = ConnectorSDK()
     if ollama_model is None:
         ollama_model = _OLLAMA_DEFAULT_MODEL
+
+    c2 = C2Server()
+    connector = ConnectorSDK()
     ollama_client = OllamaClient(model=ollama_model, ollama_host=ollama_host)
 
     if not skip_bootstrap:
