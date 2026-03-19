@@ -3,15 +3,14 @@
 from typing import TypedDict
 
 import click
-import ollama
 
 from enmeshed_bootstrapping import dev_app
-from enmeshed_bootstrapping.agents import auto_responder
+from enmeshed_bootstrapping.agents.auto_responder import AutoResponder
 from enmeshed_bootstrapping.agents.lsf_agent import LSFAgent
 from enmeshed_bootstrapping.c2_server import C2Server
 from enmeshed_bootstrapping.connector_sdk import ConnectorSDK
 from enmeshed_bootstrapping.flows import bootstrap
-from enmeshed_bootstrapping.webhook_server import WebhookServer
+from enmeshed_bootstrapping.ollama_client import OllamaClient
 
 
 class LocalAccountDTO(TypedDict):
@@ -64,7 +63,11 @@ def run(
     """Run a particular demo."""
     c2 = C2Server()
     connector = ConnectorSDK()
-    ollama_client = ollama.Client(host=ollama_host)
+    ollama_client = OllamaClient(
+        model="glm-4.7-flash:q4_K_M",
+        think=True,
+        ollama_host=ollama_host,
+    )
 
     if not skip_bootstrap:
         click.echo("running bootstrap...")
@@ -72,10 +75,14 @@ def run(
 
     match demo:
         case "auto-respond":
+            agent = AutoResponder(
+                connector,
+                ollama_client,
+                webhook_server_hostname="0.0.0.0",
+            )
+            agent.init()
             click.echo("starting auto responder agent...")
-            handlerfn = auto_responder.make_handlerfn(connector, ollama_client)
-            webhook_srv = WebhookServer(handlerfn, hostname="0.0.0.0")
-            webhook_srv.serve_forever()
+            agent.serve_forever()
 
         case "lsf":
             agent = LSFAgent(

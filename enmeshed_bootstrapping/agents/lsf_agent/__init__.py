@@ -2,13 +2,15 @@
 
 import json
 from pathlib import Path
-from typing import Literal, cast
+from typing import Literal, cast, override
 
-import ollama
 from ollama import Message
 
 from enmeshed_bootstrapping.connector_sdk import ConnectorSDK
+from enmeshed_bootstrapping.ollama_client import OllamaClient
 from enmeshed_bootstrapping.webhook_server import WebhookServer
+
+from .. import IAgent
 
 _SCRIPT_DIR = Path(__file__).parent
 _IMMA_PATH = _SCRIPT_DIR / "imma.pdf"
@@ -42,9 +44,9 @@ Du verfügst über folgende Tools:
 - Verwende kein Markdown oder andere Auszeichnungssprachen. Antworte ausschließlich in reinem Text, da die Nachrichten als Plain-Text angezeigt werden."""
 
 
-class LSFAgent:
+class LSFAgent(IAgent):
     _connector: ConnectorSDK
-    _ollama_client: ollama.Client
+    _ollama_client: OllamaClient
     _webhook_server: WebhookServer
 
     _imma_fileref: str = ""
@@ -53,11 +55,10 @@ class LSFAgent:
     def __init__(
         self,
         connector: ConnectorSDK,
-        ollama_client: ollama.Client,
+        ollama_client: OllamaClient,
         webhook_server_hostname: str | None = None,
         webhook_server_port: int | None = None,
     ) -> None:
-        # XXX: ollama client wrappen für festes model (und think Inference param)
         self._connector = connector
         self._ollama_client = ollama_client
         self._webhook_server = WebhookServer(
@@ -66,6 +67,7 @@ class LSFAgent:
             port=webhook_server_port,
         )
 
+    @override
     def init(self) -> None:
         resp = self._connector.post_own_file(
             title="Immatrikulationsbescheid",
@@ -85,6 +87,7 @@ class LSFAgent:
         )
         self._transcript_rileref = resp.result.id
 
+    @override
     def serve_forever(self) -> None:
         self._webhook_server.serve_forever()
 
@@ -172,8 +175,7 @@ class LSFAgent:
             Message(role="user", content=f"Betreff: {title}\nInhalt: {body}"),
         ]
         while True:
-            response: ollama.ChatResponse = self._ollama_client.chat(
-                model="glm-4.7-flash:q4_K_M",
+            response = self._ollama_client.chat(
                 messages=messages,
                 tools=[
                     durchsuche_studenten_daten,
@@ -182,7 +184,6 @@ class LSFAgent:
                     anfrage_pruefungsanmeldung,
                     antworten,
                 ],
-                think=True,
             )
 
             messages.append(response.message)
@@ -267,12 +268,16 @@ class LSFAgent:
                 else:
                     continue
                 break
-        # msgs = json.dumps(
-        #     [m.model_dump() for m in messages], ensure_ascii=False, indent=2
-        # )
-        # _ = Path("messages.json").write_text(msgs)
+
+        # Debug - print conversation to file
+        msgs = json.dumps(
+            [m.model_dump() for m in messages], ensure_ascii=False, indent=2
+        )
+        _ = Path("messages.json").write_text(msgs)
+
         return {}
 
+    @override
     def handle_webhook(
         self,
         trigger: str,

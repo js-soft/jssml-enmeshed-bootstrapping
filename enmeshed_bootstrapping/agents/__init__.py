@@ -1,0 +1,9 @@
+from typing import Protocol
+
+
+class IAgent(Protocol):
+    def init(self) -> None: ...
+    def serve_forever(self) -> None: ...
+    def handle_webhook(
+        self, trigger: str, data: dict[str, object]
+    ) -> dict[str, object]: ...
